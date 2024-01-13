@@ -1,55 +1,76 @@
 import sys
 
 
-#def split_ranges(initialranges, mapped):
-#    for i in initialranges:
-#        start = i[0]
-#        end = i[1]
-#
-#        for v in mapped:
-#            entry = v.split()
-#            source = int(entry[1])
-#            rang = int(entry[2])
-#
-#            if start < source:
-#                if end > source:
-#                    ranges.append([
-#
-#            else if start >= source and start < source + rang:
-#                if start + step > source + rang:
-#                    return dest + start - source, source + rang - start
-#                else:
-#                    return dest + start - source, step
-#
-#    return start, step
 
-def find_next_destination(s, mapped):
-    for v in mapped:
-        entry = v.split()
-        dest = int(entry[0])
-        source = int(entry[1])
-        rang = int(entry[2])
+def break_range(seedranges, soilmatrix):
+    newranges = seedranges.copy()
+  
+    i = 0 
+    while i < len(newranges):
+        seedrange = newranges[i]
+        seedstart = seedrange[0]
+        seedend = seedstart + seedrange[1] - 1
 
-        if s in range(source, source + rang):
-            return dest + s - source, mapped.index(v)
+        soiltoplantstart = which_soil(seedstart, soilmatrix)
+        soiltoplantend = which_soil(seedend, soilmatrix)
 
-    return s
-
-
-def find_next_break(start, step, mapped):
-    for v in mapped:
-        entry = v.split()
-        dest = int(entry[0])
-        source = int(entry[1])
-        rang = int(entry[2])
-        
-        if start > source and start < source + rang:
-            if start + step < source + rag:
-                return -1
+        if soiltoplantstart != soiltoplantend:
+            newranges.remove(seedrange)
+            # Break from right, add rest on left
+            s = soiltoplantstart
+            if isinstance(s, int):
+                newbreak = soilmatrix[s][1] + soilmatrix[s][2] - seedstart
+                newranges.append([seedstart, newbreak])
             else:
-                return source + rang
+                nexts = int(s + 0.5)
+                newbreak = soilmatrix[nexts][1] - seedstart
+                newranges.append([seedstart, newbreak])
 
-    return -1
+            newstartleft = seedstart + newbreak
+            newranges.append([newstartleft, seedend - newstartleft + 1])
+
+        else:
+            i += 1
+
+    return newranges
+
+
+def plant_seed_range(brokenranges, soilmatrix):
+    plantedrange = []
+    for seedrange in brokenranges:
+        for s in soilmatrix:
+            if is_seed_in_soil(seedrange[0], s[1], s[2]):
+                plantedrange.append(plant_seed_full(seedrange, s))
+                break
+
+        if isinstance(which_soil(seedrange[0], soilmatrix), float):
+            plantedrange.append(seedrange)
+
+    return sorted(plantedrange, key=lambda x: x[0])
+
+
+def is_seed_in_soil(seedstart, plantstart, plantrange):
+    return (seedstart >= plantstart and seedstart < plantstart + plantrange)
+
+def which_soil(seedtest, soils):
+    for i, s in enumerate(soils):
+        if i == 0 and seedtest < s[1]:
+            return -0.5
+
+        if is_seed_in_soil(seedtest, s[1], s[2]):
+            return i
+        
+        if seedtest < s[1]:
+            return i - 0.5
+        
+        if i == len(soils) - 1:
+            return i + 0.5
+
+        if seedtest > s[1] + s[2] and seedtest < soils[i + 1][1]:
+            return i + 0.5
+
+def plant_seed_full(seed, s):
+    return [seed[0] - s[1] + s[0], seed[1]]
 
 
 
@@ -60,7 +81,7 @@ sum2 = 0
 fullentry = [i.strip() for i in inputfile]
 
 seeds = fullentry[0].split(': ')[1].split()
-uniqueseeds = unique_seeds(seeds)
+seedranges = [[int(seeds[i]), int(seeds[i + 1])] for i in range(0, len(seeds), 2)]
 
 maps = []
 
@@ -72,38 +93,20 @@ for i, line in enumerate(fullentry):
     elif i == len(fullentry) - 1:
         maps.append(fullentry[ileft + 2:])
 
-
-brokenseedsstart = seeds[::2]
-brokenseedsstep = seeds[1::2]
 locations = []
-for i in range(len(brokenseedsstart):
-    breaksstart = [brokenseedsstart[i]]
-    breaksstep = [brokenseedsstep[i]]
+for seed in seedranges:
+    seed = [seed]
+    for m in maps[1:]:
+        soilsint = []
+        for i in m:
+            soilsint.append([int(s) for s in i.split()])
+
+        soilmatrix = sorted(soilsint, key=lambda x: x[1])
+        brokenrange = break_range(seed, soilmatrix)
+        seed = plant_seed_range(brokenrange, soilmatrix)
     
-    for j in range(len(breaksstart)):
-        start = breaksstart[j]
-        step = breaksstep[j]
-        for mapped in maps[1:]:
-            nextbreak = find_next_break(start, breaksstep[j], mapped)
+    locations.extend(seed)
 
-            if nextbreak != -1:
-                breaksstart.append(nextbreak)
-                breaksstep.append(start + step - nextbreak)
-        
-            s = find_next_destination(start, mapped)
+print(f'Minimum location: {sorted(locations, key=lambda x: x[0])[0][0]}')
 
-        locations.append
-    
-
-
-locations = []
-for i in range(0, len(seeds[:-1]), 2):
-    start = int(seeds[i])
-    end = start + int(seeds[i + 1])
-    for mapped in maps[1:]:
-        s = find_next_destination(start, mapped)
-       
-    locations.append(s)
-print()
-print(min(locations))
 
